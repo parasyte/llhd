@@ -373,7 +373,7 @@ impl<'a> RootVisitor<'a> {
         }
         for (arg, func) in funcs {
             let arg = builder.arg_value(arg);
-            let value = match self.emit_term(&mut builder, &input_map, func) {
+            let value = match emit_term(&mut builder, &input_map, func) {
                 Ok(v) => v,
                 Err(e) => {
                     let unit = builder.finish();
@@ -392,36 +392,36 @@ impl<'a> RootVisitor<'a> {
         }
         self.module.add_unit(ent);
     }
+}
 
-    fn emit_term(
-        &mut self,
-        builder: &mut UnitBuilder,
-        map: &HashMap<String, Arg>,
-        func: FunctionTerm,
-    ) -> Result<Value, String> {
-        Ok(match func {
-            FunctionTerm::Or(lhs, rhs) => {
-                let x = self.emit_term(builder, map, *lhs)?;
-                let y = self.emit_term(builder, map, *rhs)?;
-                builder.ins().or(x, y)
-            }
-            FunctionTerm::And(lhs, rhs) => {
-                let x = self.emit_term(builder, map, *lhs)?;
-                let y = self.emit_term(builder, map, *rhs)?;
-                builder.ins().and(x, y)
-            }
-            FunctionTerm::Not(term) => {
-                let x = self.emit_term(builder, map, *term)?;
-                builder.ins().not(x)
-            }
-            FunctionTerm::Atom(name) => {
-                let arg = map.get(&name).cloned().ok_or_else(|| {
-                    format!("term references argument `{}` which is not a pin", name)
-                })?;
-                builder.arg_value(arg)
-            }
-        })
-    }
+fn emit_term(
+    builder: &mut UnitBuilder,
+    map: &HashMap<String, Arg>,
+    func: FunctionTerm,
+) -> Result<Value, String> {
+    Ok(match func {
+        FunctionTerm::Or(lhs, rhs) => {
+            let x = emit_term(builder, map, *lhs)?;
+            let y = emit_term(builder, map, *rhs)?;
+            builder.ins().or(x, y)
+        }
+        FunctionTerm::And(lhs, rhs) => {
+            let x = emit_term(builder, map, *lhs)?;
+            let y = emit_term(builder, map, *rhs)?;
+            builder.ins().and(x, y)
+        }
+        FunctionTerm::Not(term) => {
+            let x = emit_term(builder, map, *term)?;
+            builder.ins().not(x)
+        }
+        FunctionTerm::Atom(name) => {
+            let arg = map
+                .get(&name)
+                .cloned()
+                .ok_or_else(|| format!("term references argument `{}` which is not a pin", name))?;
+            builder.arg_value(arg)
+        }
+    })
 }
 
 #[derive(Debug)]
@@ -432,9 +432,6 @@ pub enum FunctionTerm {
     Atom(String),
 }
 
-#[allow(unused_parens)]
-mod grammar {
-    include!("liberty_parser.rs");
-}
+lalrpop_util::lalrpop_mod!(liberty_parser);
 
-use grammar::FunctionParser;
+use liberty_parser::FunctionParser;

@@ -6,10 +6,10 @@
 use crate::{ir::Module, ty::Type, value::TimeValue};
 use log::debug;
 
-#[allow(unused_parens)]
-mod grammar;
 mod reader;
 mod writer;
+
+lalrpop_util::lalrpop_mod!(grammar, "/assembly/grammar.rs");
 
 /// Emit assembly for a module.
 pub fn write_module(sink: impl std::io::Write, module: &Module) {
