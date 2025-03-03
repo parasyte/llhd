@@ -135,27 +135,27 @@ impl<I: TableKey, V> PrimaryTable<I, V> {
     }
 
     /// Return an iterator over the keys and values in the table.
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (I, &'a V)> + 'a {
+    pub fn iter(&self) -> impl Iterator<Item = (I, &V)> + '_ {
         self.storage.iter().map(|(&k, v)| (I::new(k), v))
     }
 
     /// Return an iterator over the keys and mutable values in the table.
-    pub fn iter_mut<'a>(&'a mut self) -> impl Iterator<Item = (I, &'a mut V)> + 'a {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (I, &mut V)> + '_ {
         self.storage.iter_mut().map(|(&k, v)| (I::new(k), v))
     }
 
     /// Return an iterator over the keys in the table.
-    pub fn keys<'a>(&'a self) -> impl Iterator<Item = I> + 'a {
+    pub fn keys(&self) -> impl Iterator<Item = I> + '_ {
         self.storage.keys().cloned().map(I::new)
     }
 
     /// Return an iterator over the values in the table.
-    pub fn values<'a>(&'a self) -> impl Iterator<Item = &'a V> + 'a {
+    pub fn values(&self) -> impl Iterator<Item = &V> + '_ {
         self.storage.values()
     }
 
     /// Return an iterator over the mutable values in the table.
-    pub fn values_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut V> + 'a {
+    pub fn values_mut(&mut self) -> impl Iterator<Item = &mut V> + '_ {
         self.storage.values_mut()
     }
 }
@@ -305,7 +305,7 @@ impl<I: TableKey, V: Default> PrimaryTable2<I, V> {
         self.count -= 1;
         self.used.remove(id);
         self.free.add(id);
-        std::mem::replace(&mut self.storage[id as usize], Default::default())
+        std::mem::take(&mut self.storage[id as usize])
     }
 
     /// Get the number of entries for which storage is allocated.
@@ -314,19 +314,19 @@ impl<I: TableKey, V: Default> PrimaryTable2<I, V> {
     }
 
     /// Return an iterator over the keys and values in the table.
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (I, &'a V)> + 'a {
+    pub fn iter(&self) -> impl Iterator<Item = (I, &V)> + '_ {
         (&self.used)
             .iter()
             .map(move |i| (I::new(i as usize), &self.storage[i as usize]))
     }
 
     /// Return an iterator over the keys in the table.
-    pub fn keys<'a>(&'a self) -> impl Iterator<Item = I> + 'a {
+    pub fn keys(&self) -> impl Iterator<Item = I> + '_ {
         (&self.used).iter().map(|i| I::new(i as usize))
     }
 
     /// Return an iterator over the values in the table.
-    pub fn values<'a>(&'a self) -> impl Iterator<Item = &'a V> + 'a {
+    pub fn values(&self) -> impl Iterator<Item = &V> + '_ {
         (&self.used).iter().map(move |i| &self.storage[i as usize])
     }
 

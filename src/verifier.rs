@@ -61,7 +61,7 @@ impl Verifier {
             self.errors.push(VerifierError {
                 unit: self.unit_name.clone(),
                 object: None,
-                message: format!("layout has no entry block"),
+                message: "layout has no entry block".to_string(),
             });
         }
         for bb in unit.blocks() {
@@ -70,7 +70,7 @@ impl Verifier {
                 self.errors.push(VerifierError {
                     unit: self.unit_name.clone(),
                     object: Some(bb.to_string()),
-                    message: format!("block is empty"),
+                    message: "block is empty".to_string(),
                 })
             }
 
@@ -156,14 +156,14 @@ struct InstVerifier<'a> {
     unit: Unit<'a>,
 }
 
-impl<'a> Deref for InstVerifier<'a> {
+impl Deref for InstVerifier<'_> {
     type Target = Verifier;
     fn deref(&self) -> &Verifier {
         self.verifier
     }
 }
 
-impl<'a> DerefMut for InstVerifier<'a> {
+impl DerefMut for InstVerifier<'_> {
     fn deref_mut(&mut self) -> &mut Verifier {
         self.verifier
     }
@@ -548,7 +548,7 @@ impl<'a> InstVerifier<'a> {
 
     /// Verify that the types of an instruction's arguments agree.
     fn verify_arg_tys_match(&mut self, inst: Inst) {
-        let ty = match self.unit()[inst].args().get(0) {
+        let ty = match self.unit()[inst].args().first() {
             Some(&arg) => self.unit.value_type(arg),
             None => return,
         };
@@ -562,7 +562,7 @@ impl<'a> InstVerifier<'a> {
         if mismatch {
             let tys: Vec<_> = self.unit()[inst]
                 .args()
-                .into_iter()
+                .iter()
                 .map(|&arg| self.unit.value_type(arg).to_string())
                 .collect();
             let tys: String = tys.join(", ");

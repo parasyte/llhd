@@ -5,6 +5,7 @@
 use crate::ir::prelude::*;
 use crate::opt::prelude::*;
 use crate::{ir::InstData, ty::*, value::IntValue};
+use log::trace;
 use std::cmp::min;
 
 /// Constant Folding
@@ -52,10 +53,10 @@ pub fn run_on_inst(unit: &mut UnitBuilder, inst: Inst) -> bool {
             ty,
             new_ty,
             "types before (lhs) and after (rhs) folding must match (before: {}, after: {})",
-            inst.dump(&unit),
+            inst.dump(unit),
             unit.get_value_inst(replacement)
-                .map(|v| v.dump(&unit).to_string())
-                .unwrap_or_else(|| replacement.dump(&unit).to_string())
+                .map(|v| v.dump(unit).to_string())
+                .unwrap_or_else(|| replacement.dump(unit).to_string())
         );
         if let Some(name) = unit.get_name(value).map(String::from) {
             unit.set_name(replacement, name);
@@ -190,7 +191,7 @@ fn fold_shift(unit: &mut UnitBuilder, inst: Inst, ty: &Type) -> Option<Value> {
         let amount = min(amount, hidden_width);
         trace!(
             "Fold const shift `{}` (amount: {}, base_width: {}, hidden_width: {})",
-            inst.dump(&unit),
+            inst.dump(unit),
             amount,
             base_width,
             hidden_width

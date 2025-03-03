@@ -8,6 +8,7 @@ use crate::{
     table::PrimaryTable,
     ty::Type,
 };
+use serde::{Deserialize, Serialize};
 
 /// A description of the input and output arguments of a unit.
 #[derive(Default, Clone, Serialize, Deserialize)]
@@ -87,19 +88,19 @@ impl Signature {
     }
 
     /// Return an iterator over the inputs of the signature.
-    pub fn inputs<'a>(&'a self) -> impl Iterator<Item = Arg> + 'a {
+    pub fn inputs(&self) -> impl Iterator<Item = Arg> + '_ {
         self.inp.iter().cloned()
     }
 
     /// Return an iterator over the outputs of the signature.
-    pub fn outputs<'a>(&'a self) -> impl Iterator<Item = Arg> + 'a {
+    pub fn outputs(&self) -> impl Iterator<Item = Arg> + '_ {
         self.oup.iter().cloned()
     }
 
     /// Return an iterator over the arguments of the signature.
     ///
     /// Inputs come first, then outputs.
-    pub fn args<'a>(&'a self) -> impl Iterator<Item = Arg> + 'a {
+    pub fn args(&self) -> impl Iterator<Item = Arg> + '_ {
         self.inputs().chain(self.outputs())
     }
 

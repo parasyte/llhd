@@ -8,6 +8,7 @@ use crate::{
     ty::{array_ty, Type},
     value::Value,
 };
+use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
 
 /// An array value.
@@ -17,7 +18,7 @@ pub struct ArrayValue(pub Vec<Value>);
 impl ArrayValue {
     /// Create a new uniform array.
     pub fn new_uniform(length: usize, value: Value) -> Self {
-        ArrayValue(std::iter::repeat(value).take(length).collect())
+        ArrayValue(std::iter::repeat_n(value, length).collect())
     }
 
     /// Create a new array.
@@ -34,7 +35,7 @@ impl ArrayValue {
     pub fn ty(&self) -> Type {
         array_ty(
             self.0.len(),
-            self.0.get(0).expect("empty array has no proper type").ty(),
+            self.0.first().expect("empty array has no proper type").ty(),
         )
     }
 }

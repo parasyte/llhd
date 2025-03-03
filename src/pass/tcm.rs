@@ -10,6 +10,7 @@ use crate::{
     value::IntValue,
 };
 use itertools::Itertools;
+use log::{debug, info, trace};
 use std::collections::HashMap;
 
 /// Temporal Code Motion
@@ -64,7 +65,7 @@ impl Pass for TemporalCodeMotion {
                         } else {
                             trace!(
                                 "Skipping {} for prb move (would not dominate uses)",
-                                inst.dump(&unit)
+                                inst.dump(unit)
                             );
                         }
                     }
@@ -75,7 +76,7 @@ impl Pass for TemporalCodeMotion {
                 if unit.inst_block(inst) == Some(head_bb) {
                     continue;
                 }
-                debug!("Hoisting {} into {}", inst.dump(&unit), head_bb.dump(&unit));
+                debug!("Hoisting {} into {}", inst.dump(unit), head_bb.dump(unit));
                 unit.remove_inst(inst);
                 unit.prepend_inst(inst, head_bb);
                 modified = true;
@@ -93,15 +94,15 @@ impl Pass for TemporalCodeMotion {
             for inst in tr.tail_insts() {
                 merge.entry(&unit[inst]).or_default().push(inst);
             }
-            let merge: Vec<_> = merge.into_iter().map(|(_, is)| is).collect();
+            let merge: Vec<_> = merge.into_values().collect();
             for insts in merge {
                 if insts.len() <= 1 {
-                    trace!("Skipping {} (no equivalents)", insts[0].dump(&unit));
+                    trace!("Skipping {} (no equivalents)", insts[0].dump(unit));
                     continue;
                 }
                 trace!("Merging:",);
                 for i in &insts {
-                    trace!("  {}", i.dump(&unit));
+                    trace!("  {}", i.dump(unit));
                 }
 
                 // Create a new basic block for the singleton wait inst.
@@ -154,7 +155,7 @@ fn add_aux_blocks(_ctx: &PassContext, unit: &mut UnitBuilder) -> bool {
 
     // Process each block separately.
     for bb in head_bbs {
-        trace!("Adding aux blocks into {}", bb.dump(&unit));
+        trace!("Adding aux blocks into {}", bb.dump(unit));
         let tr = trg[bb];
 
         // Gather a list of predecessor instructions per region, which branch
@@ -178,9 +179,9 @@ fn add_aux_blocks(_ctx: &PassContext, unit: &mut UnitBuilder) -> bool {
             let aux_bb = unit.named_block("aux");
             unit.append_to(aux_bb);
             unit.ins().br(bb);
-            trace!("  Adding {} from {}", aux_bb.dump(&unit), src_tr);
+            trace!("  Adding {} from {}", aux_bb.dump(unit), src_tr);
             for inst in insts {
-                trace!("    Replacing {} in {}", bb.dump(&unit), inst.dump(&unit));
+                trace!("    Replacing {} in {}", bb.dump(unit), inst.dump(unit));
                 unit.replace_block_within_inst(bb, aux_bb, inst);
             }
             modified = true;
@@ -204,14 +205,14 @@ fn push_drives(ctx: &PassContext, unit: &mut UnitBuilder) -> bool {
     let mut aliases = HashMap::<Value, Value>::new();
     let mut drv_seq = HashMap::<Value, Vec<Inst>>::new();
     for &bb in dt.blocks_post_order().iter().rev() {
-        trace!("Checking {} for aliases", bb.dump(&unit));
+        trace!("Checking {} for aliases", bb.dump(unit));
         for inst in unit.insts(bb) {
             let data = &unit[inst];
             if let Opcode::Drv | Opcode::DrvCond = data.opcode() {
                 // Gather drive sequences to the same signal.
                 let signal = data.args()[0];
                 let signal = aliases.get(&signal).cloned().unwrap_or(signal);
-                trace!("  Drive {} ({})", signal.dump(&unit), inst.dump(&unit));
+                trace!("  Drive {} ({})", signal.dump(unit), inst.dump(unit));
                 drv_seq.entry(signal).or_default().push(inst);
             } else if let Some(value) = unit.get_inst_result(inst) {
                 // Gather signal aliases.
@@ -225,9 +226,9 @@ fn push_drives(ctx: &PassContext, unit: &mut UnitBuilder) -> bool {
                     let arg = aliases.get(&arg).cloned().unwrap_or(arg);
                     trace!(
                         "  Alias {} of {} ({})",
-                        value.dump(&unit),
-                        arg.dump(&unit),
-                        inst.dump(&unit)
+                        value.dump(unit),
+                        arg.dump(unit),
+                        inst.dump(unit)
                     );
                     aliases.insert(value, arg);
                 }
@@ -241,18 +242,18 @@ fn push_drives(ctx: &PassContext, unit: &mut UnitBuilder) -> bool {
     // Try to migrate drive instructions into the tails of their respective
     // temporal regions.
     for (&signal, drives) in &drv_seq {
-        trace!("Moving drives on signal {}", signal.dump(&unit));
+        trace!("Moving drives on signal {}", signal.dump(unit));
         // TODO: Don't directly move drives, but track if move is possible and what
         // the conditions are. Then do post-processing down below.
         for &drive in drives.iter().rev() {
             // Skip drives that are already in the right place.
             let drive_bb = unit.inst_block(drive).unwrap();
             if trg.is_tail(drive_bb) {
-                trace!("  Skipping {} (already in tail block)", drive.dump(&unit),);
+                trace!("  Skipping {} (already in tail block)", drive.dump(unit),);
                 continue;
             }
             if trg[trg[drive_bb]].tail_blocks.is_empty() {
-                trace!("  Skipping {} (no tail blocks)", drive.dump(&unit),);
+                trace!("  Skipping {} (no tail blocks)", drive.dump(unit),);
                 continue;
             }
 
@@ -300,9 +301,9 @@ fn push_drive(
             if !dt.value_dominates_block(unit, arg, dst_bb) {
                 trace!(
                     "  Skipping {} ({} does not dominate {})",
-                    drive.dump(&unit),
-                    arg.dump(&unit),
-                    dst_bb.dump(&unit)
+                    drive.dump(unit),
+                    arg.dump(unit),
+                    dst_bb.dump(unit)
                 );
                 return false;
             }
@@ -329,9 +330,9 @@ fn push_drive(
                     if !dt.value_dominates_block(unit, cond_val, dst_bb) {
                         trace!(
                             "  Skipping {} (branch cond {} does not dominate {})",
-                            drive.dump(&unit),
-                            cond_val.dump(&unit),
-                            dst_bb.dump(&unit)
+                            drive.dump(unit),
+                            cond_val.dump(unit),
+                            dst_bb.dump(unit)
                         );
                         return false;
                     }
@@ -340,14 +341,14 @@ fn push_drive(
                         conds.push((cond_val, cond_pol != 0));
                         trace!(
                             "    {} -> {} ({} == {})",
-                            parent.dump(&unit),
-                            src_finger.dump(&unit),
-                            cond_val.dump(&unit),
+                            parent.dump(unit),
+                            src_finger.dump(unit),
+                            cond_val.dump(unit),
                             cond_pol
                         );
                     }
                 } else {
-                    trace!("    {} -> {}", parent.dump(&unit), src_finger.dump(&unit));
+                    trace!("    {} -> {}", parent.dump(unit), src_finger.dump(unit));
                 }
                 src_finger = parent;
             } else if i2 < i1 {
@@ -359,7 +360,7 @@ fn push_drive(
             }
         }
         if src_finger != dst_finger {
-            trace!("  Skipping {} (no common dominator)", drive.dump(&unit));
+            trace!("  Skipping {} (no common dominator)", drive.dump(unit));
             return false;
         }
 
@@ -370,7 +371,7 @@ fn push_drive(
 
     // If we arrive here, all moves are possible and can now be executed.
     for (dst_bb, conds) in moves {
-        debug!("Moving {} to {}", drive.dump(&unit), dst_bb.dump(&unit));
+        debug!("Moving {} to {}", drive.dump(unit), dst_bb.dump(unit));
 
         // Start by assembling the drive condition in the destination block. The
         // order is key here to allow for easy constant folding and subexpr
@@ -435,7 +436,7 @@ fn coalesce_drives(_ctx: &PassContext, block: Block, unit: &mut UnitBuilder) -> 
             debug!(
                 "Coalescing {} drives on {}",
                 drives.len(),
-                target.dump(&unit)
+                target.dump(unit)
             );
             let mut drives = drives.into_iter();
 

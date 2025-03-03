@@ -15,6 +15,7 @@ pub use int::*;
 pub use r#struct::*;
 
 use crate::ty::Type;
+use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
 
 /// A value.

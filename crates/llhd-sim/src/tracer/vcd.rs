@@ -43,8 +43,8 @@ where
     /// Clears the `pending` set.
     fn flush(&mut self) {
         let time = (&self.time * &self.precision).trunc();
-        write!(self.writer.borrow_mut(), "#{}\n", time).unwrap();
-        for (signal, value) in std::mem::replace(&mut self.pending, HashMap::new()) {
+        writeln!(self.writer.borrow_mut(), "#{}", time).unwrap();
+        for (signal, value) in std::mem::take(&mut self.pending) {
             for &(ref abbrev, _, offset) in &self.abbrevs[&signal] {
                 self.flush_signal(signal, offset, &value, abbrev);
             }
@@ -59,7 +59,7 @@ where
             Value::Void => (),
             Value::Int(v) => {
                 assert_eq!(offset, 0);
-                write!(self.writer.borrow_mut(), "b{:b} {}\n", v.value, abbrev).unwrap();
+                writeln!(self.writer.borrow_mut(), "b{:b} {}", v.value, abbrev).unwrap();
             }
             Value::Time(_) => (),
             Value::Array(v) => {
@@ -89,9 +89,9 @@ where
 
     /// Allocate short names and emit `$scope` statement.
     fn prepare_scope(&mut self, state: &State, scope: &Scope, index: &mut usize) {
-        write!(
+        writeln!(
             self.writer.borrow_mut(),
-            "$scope module {} $end\n",
+            "$scope module {} $end",
             scope.name.replace('.', "_")
         )
         .unwrap();
@@ -113,7 +113,7 @@ where
         for subscope in scope.subscopes.iter() {
             self.prepare_scope(state, subscope, index);
         }
-        write!(self.writer.borrow_mut(), "$upscope $end\n").unwrap();
+        writeln!(self.writer.borrow_mut(), "$upscope $end").unwrap();
     }
 
     /// Expand signals and allocate short names.
@@ -142,10 +142,10 @@ where
                 *index += 1;
 
                 // Write the abbreviations for this signal.
-                let abbrevs_for_signal = self.abbrevs.entry(sigref).or_insert_with(Vec::new);
-                write!(
+                let abbrevs_for_signal = self.abbrevs.entry(sigref).or_default();
+                writeln!(
                     self.writer.borrow_mut(),
-                    "$var wire {} {} {} $end\n",
+                    "$var wire {} {} {} $end",
                     width,
                     abbrev,
                     name
@@ -197,12 +197,12 @@ where
             clap::crate_version!()
         )
         .unwrap();
-        write!(self.writer.borrow_mut(), "$timescale 1ps $end\n").unwrap();
+        writeln!(self.writer.borrow_mut(), "$timescale 1ps $end").unwrap();
         self.prepare_scope(state, &state.scope, &mut 0);
-        write!(self.writer.borrow_mut(), "$enddefinitions $end\n").unwrap();
+        writeln!(self.writer.borrow_mut(), "$enddefinitions $end").unwrap();
 
         // Dump the variables.
-        write!(self.writer.borrow_mut(), "$dumpvars\n").unwrap();
+        writeln!(self.writer.borrow_mut(), "$dumpvars").unwrap();
         for &signal in state.probes.keys() {
             if let Some(abbrevs) = self.abbrevs.get(&signal) {
                 for &(ref abbrev, _, offset) in abbrevs {
@@ -210,7 +210,7 @@ where
                 }
             }
         }
-        write!(self.writer.borrow_mut(), "$end\n").unwrap();
+        writeln!(self.writer.borrow_mut(), "$end").unwrap();
     }
 
     fn step(&mut self, state: &State, changed: &HashSet<SignalRef>) {

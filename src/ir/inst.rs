@@ -11,6 +11,7 @@ use crate::{
     value::{IntValue, TimeValue},
 };
 use bitflags::bitflags;
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
 /// A temporary object used to construct a single instruction.
@@ -35,7 +36,7 @@ impl<'a, 'b> InstBuilder<'a, 'b> {
     }
 }
 
-impl<'a, 'b> InstBuilder<'a, 'b> {
+impl InstBuilder<'_, '_> {
     /// Construct the zero value for a type.
     ///
     /// This is a convenience function that creates the appropriate instruction
@@ -121,7 +122,7 @@ impl<'a, 'b> InstBuilder<'a, 'b> {
         let inst = self.build(
             InstData::Aggregate {
                 opcode: Opcode::Array,
-                args: args,
+                args,
             },
             ty,
         );
@@ -139,7 +140,7 @@ impl<'a, 'b> InstBuilder<'a, 'b> {
         let inst = self.build(
             InstData::Aggregate {
                 opcode: Opcode::Struct,
-                args: args,
+                args,
             },
             ty,
         );
@@ -549,7 +550,7 @@ impl<'a, 'b> InstBuilder<'a, 'b> {
     /// Creates phi instruction to implement phi node in SSA graph representing the function
     /// or process
     pub fn phi(&mut self, args: Vec<Value>, bbs: Vec<Block>) -> Value {
-        assert!(args.len() > 0);
+        assert!(!args.is_empty());
         assert_eq!(args.len(), bbs.len());
         let ty = self.value_type(args[0]);
         let data = InstData::Phi {
@@ -587,7 +588,7 @@ impl<'a, 'b> InstBuilder<'a, 'b> {
         let data = InstData::Wait {
             opcode: Opcode::Wait,
             bbs: [bb],
-            args: args,
+            args,
         };
         self.build(data, void_ty())
     }
@@ -599,14 +600,14 @@ impl<'a, 'b> InstBuilder<'a, 'b> {
         let data = InstData::Wait {
             opcode: Opcode::WaitTime,
             bbs: [bb],
-            args: args,
+            args,
         };
         self.build(data, void_ty())
     }
 }
 
 /// Convenience functions to construct the different instruction formats.
-impl<'a, 'b> InstBuilder<'a, 'b> {
+impl InstBuilder<'_, '_> {
     /// `opcode`
     fn build_nullary(&mut self, opcode: Opcode) -> Inst {
         let data = InstData::Nullary { opcode };
@@ -656,7 +657,7 @@ impl<'a, 'b> InstBuilder<'a, 'b> {
 }
 
 /// Fundamental convenience forwards to the wrapped builder.
-impl<'a, 'b> InstBuilder<'a, 'b> {
+impl InstBuilder<'_, '_> {
     /// Convenience forward to `UnitBuilder`.
     pub(crate) fn build(&mut self, data: InstData, ty: Type) -> Inst {
         let inst = self.builder.build_inst(data, ty);

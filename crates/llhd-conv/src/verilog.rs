@@ -75,7 +75,7 @@ fn write_entity(output: &mut impl Write, entity: llhd::ir::Unit, ctx: &mut Conte
     let ports = entity
         .args()
         .map(|v| ctx.value_name(entity, (entity.id(), v)));
-    write!(output, "module {} ({});\n", name, ports.format(", "))?;
+    writeln!(output, "module {} ({});", name, ports.format(", "))?;
 
     // Emit the port declarations.
     let ports = entity
@@ -84,9 +84,9 @@ fn write_entity(output: &mut impl Write, entity: llhd::ir::Unit, ctx: &mut Conte
         .chain(entity.output_args().zip(repeat("output")));
     for (v, dir) in ports {
         let n = ctx.value_name(entity, (entity.id(), v));
-        write!(
+        writeln!(
             output,
-            "    {} {} {};\n",
+            "    {} {} {};",
             dir,
             flatten_type(&entity.value_type(v))?,
             n
@@ -108,7 +108,7 @@ fn write_entity_body(
     debug!("Emitting entity {}", entity.name());
     write!(output, "\n    // Entity {}\n", entity.name())?;
     for inst in entity.all_insts() {
-        write!(output, "    // {}\n", inst.dump(&entity))?;
+        writeln!(output, "    // {}", inst.dump(&entity))?;
     }
     Ok(())
 }
@@ -154,7 +154,7 @@ fn sizeof_type(ty: &llhd::Type) -> Result<usize> {
         }
         llhd::SignalType(ty) => Ok(sizeof_type(ty)?),
         llhd::ArrayType(w, ty) => Ok(w * sizeof_type(ty)?),
-        llhd::StructType(tys) => tys.iter().map(|ty| sizeof_type(ty)).sum(),
+        llhd::StructType(tys) => tys.iter().map(sizeof_type).sum(),
         _ => bail!("Type `{}` not supported", ty),
     }
 }

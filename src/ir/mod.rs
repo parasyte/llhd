@@ -7,6 +7,7 @@
 #![deny(missing_docs)]
 
 use crate::{impl_table_key, ty::Type};
+use serde::{Deserialize, Serialize};
 
 mod cfg;
 mod dfg;
@@ -73,8 +74,10 @@ impl Block {
 /// Internal table storage for values.
 #[allow(missing_docs)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Default)]
 pub enum ValueData {
     /// The invalid value placeholder.
+    #[default]
     Invalid,
     /// The value is the result of an instruction.
     Inst { ty: Type, inst: Inst },
@@ -94,11 +97,6 @@ impl ValueData {
     }
 }
 
-impl Default for ValueData {
-    fn default() -> ValueData {
-        ValueData::Invalid
-    }
-}
 
 /// Internal table storage for blocks.
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]

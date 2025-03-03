@@ -3,6 +3,7 @@
 //! Dead Code Elimination
 
 use crate::{ir::prelude::*, opt::prelude::*};
+use log::{debug, info, trace};
 use std::collections::{HashMap, HashSet};
 
 /// Dead Code Elimination
@@ -45,8 +46,8 @@ impl Pass for DeadCodeElim {
             }
             debug!(
                 "Replacing {} with br {}",
-                inst.dump(&unit),
-                target.dump(&unit)
+                inst.dump(unit),
+                target.dump(unit)
             );
             unit.insert_before(inst);
             unit.ins().br(target);
@@ -62,8 +63,8 @@ impl Pass for DeadCodeElim {
         {
             debug!(
                 "Replacing trivial block {} with {}",
-                from.dump(&unit),
-                to.dump(&unit)
+                from.dump(unit),
+                to.dump(unit)
             );
             unit.replace_block_use(from, to);
             // If this is the entry block, hoist the target up as the first block.
@@ -98,7 +99,7 @@ impl Pass for DeadCodeElim {
 
         // Concatenate trivially sequential blocks.
         for (block, into) in merge_blocks {
-            debug!("Merge {} into {}", block.dump(&unit), into.dump(&unit));
+            debug!("Merge {} into {}", block.dump(unit), into.dump(unit));
             let term = unit.terminator(into);
             while let Some(inst) = unit.first_inst(block) {
                 unit.remove_inst(inst);
@@ -139,7 +140,7 @@ fn check_branch_trivial(
         return entry;
     }
     triv_br.insert(inst, None);
-    trace!("Checking if trivial {}", inst.dump(&unit));
+    trace!("Checking if trivial {}", inst.dump(unit));
 
     // Now we know the block is empty. Check for a few common cases of trivial
     // branches.
@@ -178,7 +179,7 @@ fn check_block_retargetable(
     triv_bb: &mut HashMap<Block, Option<Block>>,
     triv_br: &mut HashMap<Inst, Option<Block>>,
 ) -> Option<Block> {
-    trace!("Checking if trivial {}", block.dump(&unit));
+    trace!("Checking if trivial {}", block.dump(unit));
 
     // Check that there are no phi nodes on the target block.
     if unit.insts(block).any(|inst| unit[inst].opcode().is_phi()) {
@@ -222,7 +223,7 @@ fn prune_blocks(unit: &mut UnitBuilder) -> bool {
 
     // Remove all unreachable blocks.
     for bb in unreachable {
-        debug!("Prune unreachable block {}", bb.dump(&unit));
+        debug!("Prune unreachable block {}", bb.dump(unit));
         modified |= true;
         unit.delete_block(bb);
     }

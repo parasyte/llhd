@@ -6,6 +6,7 @@ use crate::{
     ir::{prelude::*, InstData},
     opt::prelude::*,
 };
+use log::{debug, info, trace};
 use std::collections::{HashMap, HashSet};
 
 /// Global Common Subexpression Elimination
@@ -52,12 +53,12 @@ impl Pass for GlobalCommonSubexprElim {
                 continue;
             }
             let value = unit.inst_result(inst);
-            trace!("Examining {}", inst.dump(&unit));
+            trace!("Examining {}", inst.dump(unit));
 
             // Try the candidates.
             if let Some(aliases) = values.get_mut(&unit[inst]) {
                 'inner: for &cv in aliases.iter() {
-                    trace!("  Trying {}", cv.dump(&unit));
+                    trace!("  Trying {}", cv.dump(unit));
                     let cv_inst = unit.value_inst(cv);
                     let inst_bb = unit.inst_block(inst).unwrap();
                     let cv_bb = unit.inst_block(cv_inst).unwrap();
@@ -75,7 +76,7 @@ impl Pass for GlobalCommonSubexprElim {
                     // Replace the current inst with the recorded value if the
                     // latter dominates the former.
                     if which_dt.dominates(cv_bb, inst_bb) {
-                        debug!("Replace {} with {}", inst.dump(&unit), cv.dump(&unit),);
+                        debug!("Replace {} with {}", inst.dump(unit), cv.dump(unit),);
                         unit.replace_use(value, cv);
                         unit.prune_if_unused(inst);
                         modified = true;
@@ -85,7 +86,7 @@ impl Pass for GlobalCommonSubexprElim {
                     // Replace the recorded value with the current inst if the
                     // latter dominates the former.
                     if which_dt.dominates(inst_bb, cv_bb) {
-                        debug!("Replace {} with {}", cv.dump(&unit), value.dump(&unit),);
+                        debug!("Replace {} with {}", cv.dump(unit), value.dump(unit),);
                         unit.replace_use(cv, value);
                         unit.prune_if_unused(cv_inst);
                         aliases.remove(&cv); // crazy that this works; NLL <3
@@ -102,14 +103,14 @@ impl Pass for GlobalCommonSubexprElim {
 
                     trace!(
                         "    Intersect(Dom({}), Dom({})):",
-                        inst_bb.dump(&unit),
-                        cv_bb.dump(&unit)
+                        inst_bb.dump(unit),
+                        cv_bb.dump(unit)
                     );
                     for bb in which_dt
                         .dominators(inst_bb)
-                        .intersection(&which_dt.dominators(cv_bb))
+                        .intersection(which_dt.dominators(cv_bb))
                     {
-                        trace!("      {}", bb.dump(&unit));
+                        trace!("      {}", bb.dump(unit));
                     }
                     let target_bb = which_dt
                         .dominators(inst_bb)
@@ -125,20 +126,20 @@ impl Pass for GlobalCommonSubexprElim {
                         Some(&bb) => bb,
                         None => continue,
                     };
-                    trace!("    Latest common dominator: {}", target_bb.dump(&unit));
+                    trace!("    Latest common dominator: {}", target_bb.dump(unit));
 
                     // Hoist the instruction up into the target block.
                     debug!(
                         "Hoist {} up into {}",
-                        inst.dump(&unit),
-                        target_bb.dump(&unit)
+                        inst.dump(unit),
+                        target_bb.dump(unit)
                     );
                     let term = unit.terminator(target_bb);
                     unit.remove_inst(inst);
                     unit.insert_inst_before(inst, term);
 
                     // Replace all uses of the recorded value with the inst.
-                    debug!("Replace {} with {}", cv.dump(&unit), value.dump(&unit),);
+                    debug!("Replace {} with {}", cv.dump(unit), value.dump(unit),);
                     unit.replace_use(cv, value);
                     unit.prune_if_unused(cv_inst);
                     aliases.remove(&cv); // crazy that this works; NLL <3
@@ -151,7 +152,7 @@ impl Pass for GlobalCommonSubexprElim {
             // trace!("Recording {}", inst.dump(&unit));
             values
                 .entry(unit[inst].clone())
-                .or_insert_with(Default::default)
+                .or_default()
                 .insert(value);
         }
         modified

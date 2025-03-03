@@ -36,7 +36,7 @@ pub struct State<'ll> {
     pub timed: BTreeMap<TimeValue, HashSet<InstanceRef>>,
 }
 
-impl<'ll> State<'ll> {
+impl State<'_> {
     //     /// Create a new simulation state.
     //     pub fn new(
     //         module: &'ll Module,
@@ -145,7 +145,7 @@ impl<'ll> State<'ll> {
             );
             self.events
                 .entry(i.time)
-                .or_insert_with(Default::default)
+                .or_default()
                 .insert(i.signal, i.value);
         }
     }
@@ -161,13 +161,13 @@ impl<'ll> State<'ll> {
             debug!("Schedule {:?}  [@ {}]", i.inst, i.time);
             self.timed
                 .entry(i.time)
-                .or_insert_with(Default::default)
+                .or_default()
                 .insert(i.inst);
         }
     }
 
     /// Dequeue all events due at the current time.
-    pub fn take_next_events(&mut self) -> impl Iterator<Item = (ValuePointer, Value)> {
+    pub fn take_next_events(&mut self) -> impl Iterator<Item = (ValuePointer, Value)> + use<> {
         if let Some(x) = self.events.remove(&self.time) {
             x.into_iter()
         } else {
@@ -176,7 +176,7 @@ impl<'ll> State<'ll> {
     }
 
     /// Dequeue all timed instances due at the current time.
-    pub fn take_next_timed(&mut self) -> impl Iterator<Item = InstanceRef> {
+    pub fn take_next_timed(&mut self) -> impl Iterator<Item = InstanceRef> + use<> {
         if let Some(x) = self.timed.remove(&self.time) {
             x.into_iter()
         } else {
@@ -258,8 +258,8 @@ impl Signal {
     /// Create a new signal.
     pub fn new(ty: llhd::Type, value: Value) -> Signal {
         Signal {
-            ty: ty,
-            value: value,
+            ty,
+            value,
         }
     }
 
@@ -294,7 +294,7 @@ pub struct Instance<'ll> {
     pub signal_values: HashMap<SignalRef, llhd::ir::Value>,
 }
 
-impl<'ll> Instance<'ll> {
+impl Instance<'_> {
     //     pub fn new(
     //         values: HashMap<llhd::ir::Value, ValueSlot>,
     //         kind: InstanceKind<'ll>,
@@ -644,6 +644,6 @@ impl Scope {
 
     /// Add a probe.
     pub fn add_probe(&mut self, signal: SignalRef, name: String) {
-        self.probes.entry(signal).or_insert(Vec::new()).push(name);
+        self.probes.entry(signal).or_default().push(name);
     }
 }

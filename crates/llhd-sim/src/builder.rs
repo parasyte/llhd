@@ -25,7 +25,7 @@ impl<'ll> Builder<'ll> {
     /// Create a new builder for the given module.
     fn new(module: &llhd::ir::Module) -> Builder {
         Builder {
-            module: module,
+            module,
             signals: Vec::new(),
             probes: HashMap::new(),
             insts: Vec::new(),
@@ -65,7 +65,7 @@ impl<'ll> Builder<'ll> {
     pub fn alloc_signal_probe(&mut self, signal: SignalRef, name: String) {
         self.probes
             .entry(signal)
-            .or_insert(Vec::new())
+            .or_default()
             .push(name.clone());
         self.scope_stack.last_mut().unwrap().add_probe(signal, name);
     }

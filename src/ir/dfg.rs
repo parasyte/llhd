@@ -10,6 +10,7 @@ use crate::{
     ir::{Arg, Block, ExtUnit, ExtUnitData, Inst, InstData, Value, ValueData},
     table::{PrimaryTable2, SecondaryTable},
 };
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 /// A data flow graph.

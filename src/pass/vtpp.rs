@@ -3,6 +3,7 @@
 //! Var to Phi Promotion
 
 use crate::{analysis::PredecessorTable, ir::prelude::*, opt::prelude::*};
+use log::{debug, info, trace};
 use std::collections::{HashMap, HashSet};
 
 /// Var to Phi Promotion
@@ -59,24 +60,24 @@ impl Pass for VarToPhiPromotion {
         trace!("Value table:");
         for (&ld, &v) in &value_table {
             let v = match v {
-                Var::Incoming(var, bb) => format!("{} into {}", var.dump(&unit), bb.dump(&unit)),
-                Var::Value(v) => format!("{}", v.dump(&unit)),
+                Var::Incoming(var, bb) => format!("{} into {}", var.dump(unit), bb.dump(unit)),
+                Var::Value(v) => format!("{}", v.dump(unit)),
             };
-            trace!("  ld {} = {}", ld.dump(&unit), v);
+            trace!("  ld {} = {}", ld.dump(unit), v);
         }
 
         trace!("Variables leaving blocks:");
         for (&block, vars) in &block_outs {
-            trace!("  Block {}:", block.dump(&unit));
+            trace!("  Block {}:", block.dump(unit));
             for (&var, &value) in vars {
-                trace!("    st {} = {}", var.dump(&unit), value.dump(&unit));
+                trace!("    st {} = {}", var.dump(unit), value.dump(unit));
             }
         }
 
         // Replace loads with the corresponding values which are live at the
         // respective locations.
         for (ld, slot) in value_table {
-            trace!("Replacing {} with {:?}", ld.dump(&unit), slot);
+            trace!("Replacing {} with {:?}", ld.dump(unit), slot);
             let inst = unit.value_inst(ld);
             let value = match slot {
                 Var::Incoming(var, bb) => {
@@ -85,7 +86,7 @@ impl Pass for VarToPhiPromotion {
                 }
                 Var::Value(v) => v,
             };
-            debug!("Replacing {} with {}", inst.dump(&unit), value.dump(&unit));
+            debug!("Replacing {} with {}", inst.dump(unit), value.dump(unit));
             unit.replace_use(ld, value);
             unit.prune_if_unused(inst);
             modified |= true;
@@ -94,10 +95,10 @@ impl Pass for VarToPhiPromotion {
         // Strip away all variables.
         for (var_inst, store_insts) in vars {
             for store_inst in store_insts {
-                debug!("Removing {}", store_inst.dump(&unit));
+                debug!("Removing {}", store_inst.dump(unit));
                 unit.delete_inst(store_inst);
             }
-            debug!("Removing {}", var_inst.dump(&unit));
+            debug!("Removing {}", var_inst.dump(unit));
             unit.delete_inst(var_inst);
             modified |= true;
         }
@@ -128,10 +129,10 @@ fn materialize_value(
     // we simply return `None` to indicate that there is no value to be gotten
     // from this control flow path.
     if stack.contains(&block) {
-        trace!("  Breaking recursion at {}", block.dump(&unit));
+        trace!("  Breaking recursion at {}", block.dump(unit));
         return None;
     }
-    trace!("  Materialize {} in {}", var.dump(&unit), block.dump(&unit));
+    trace!("  Materialize {} in {}", var.dump(unit), block.dump(unit));
 
     // Insert a recursion blocker.
     stack.insert(block);
@@ -156,12 +157,12 @@ fn materialize_value(
     } else if distinct_values.len() == 1 {
         distinct_values.into_iter().next()
     } else {
-        trace!("  Insert phi node in {}", block.dump(&unit));
+        trace!("  Insert phi node in {}", block.dump(unit));
         for &(from, value) in &incoming_values {
             trace!(
                 "    Incoming {} from {}",
-                value.dump(&unit),
-                from.dump(&unit)
+                value.dump(unit),
+                from.dump(unit)
             );
         }
         unit.prepend_to(block);
@@ -171,8 +172,8 @@ fn materialize_value(
         );
         debug!(
             "Insert {} in {}",
-            unit.value_inst(phi).dump(&unit),
-            block.dump(&unit)
+            unit.value_inst(phi).dump(unit),
+            block.dump(unit)
         );
         Some(phi)
     };

@@ -27,7 +27,7 @@ where
     /// Create a new VCD tracer which will write its VCD to `writer`.
     pub fn new(writer: T) -> Self {
         DumpTracer {
-            writer: writer,
+            writer,
             precision: BigInt::from_usize(10).unwrap().pow(12usize).into(), // ps
             signals: Default::default(),
         }
@@ -38,7 +38,7 @@ where
         match value {
             Value::Void => (),
             Value::Int(v) => {
-                write!(self.writer, "0x{0:01$x}", v.value, (v.width + 3) / 4).unwrap();
+                write!(self.writer, "0x{0:01$x}", v.value, v.width.div_ceil(4)).unwrap();
             }
             Value::Time(_) => (),
             Value::Array(v) => {
@@ -93,9 +93,9 @@ where
     }
 
     fn step(&mut self, state: &State, changed: &HashSet<SignalRef>) {
-        write!(
+        writeln!(
             self.writer,
-            "{}ps {}d {}e\n",
+            "{}ps {}d {}e",
             (state.time.time() * &self.precision).trunc(),
             state.time.delta(),
             state.time.epsilon()
@@ -107,7 +107,7 @@ where
         for signal in changed {
             write!(self.writer, "  {} = ", self.signals[&signal]).unwrap();
             self.write_value(state[signal].value());
-            write!(self.writer, "\n").unwrap();
+            writeln!(self.writer).unwrap();
         }
     }
 

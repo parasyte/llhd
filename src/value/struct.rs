@@ -8,6 +8,7 @@ use crate::{
     ty::{struct_ty, Type},
     value::Value,
 };
+use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
 
 /// A struct value.

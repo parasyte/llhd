@@ -14,6 +14,7 @@ use crate::{
     verifier::Verifier,
 };
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
 
 /// A module.
@@ -37,6 +38,12 @@ pub struct Module {
     /// file, this table *may* contain additional hints on the byte offsets
     /// where the units were located.
     location_hints: HashMap<UnitId, usize>,
+}
+
+impl Default for Module {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Module {
@@ -95,12 +102,12 @@ impl Module {
     }
 
     /// Return an iterator over the units in this module.
-    pub fn units<'a>(&'a self) -> impl Iterator<Item = Unit<'a>> + 'a {
+    pub fn units(&self) -> impl Iterator<Item = Unit<'_>> + '_ {
         self.unit_order.iter().map(move |&id| self.unit(id))
     }
 
     /// Return a mutable iterator over the units in this module.
-    pub fn units_mut<'a>(&'a mut self) -> impl Iterator<Item = UnitBuilder<'a>> + 'a {
+    pub fn units_mut(&mut self) -> impl Iterator<Item = UnitBuilder<'_>> + '_ {
         self.units
             .storage
             .iter_mut()
@@ -108,12 +115,12 @@ impl Module {
     }
 
     /// Return a parallel iterator over the units in this module.
-    pub fn par_units<'a>(&'a self) -> impl ParallelIterator<Item = Unit<'a>> + 'a {
+    pub fn par_units(&self) -> impl ParallelIterator<Item = Unit<'_>> + '_ {
         self.unit_order.par_iter().map(move |&id| self.unit(id))
     }
 
     /// Return a parallel mutable iterator over the units in this module.
-    pub fn par_units_mut<'a>(&'a mut self) -> impl ParallelIterator<Item = UnitBuilder<'a>> + 'a {
+    pub fn par_units_mut(&mut self) -> impl ParallelIterator<Item = UnitBuilder<'_>> + '_ {
         self.units
             .storage
             .par_iter_mut()
@@ -121,22 +128,22 @@ impl Module {
     }
 
     /// Return an iterator over the functions in this module.
-    pub fn functions<'a>(&'a self) -> impl Iterator<Item = Unit<'a>> + 'a {
+    pub fn functions(&self) -> impl Iterator<Item = Unit<'_>> + '_ {
         self.units().filter(|unit| unit.is_function())
     }
 
     /// Return an iterator over the processes in this module.
-    pub fn processes<'a>(&'a self) -> impl Iterator<Item = Unit<'a>> + 'a {
+    pub fn processes(&self) -> impl Iterator<Item = Unit<'_>> + '_ {
         self.units().filter(|unit| unit.is_process())
     }
 
     /// Return an iterator over the entities in this module.
-    pub fn entities<'a>(&'a self) -> impl Iterator<Item = Unit<'a>> + 'a {
+    pub fn entities(&self) -> impl Iterator<Item = Unit<'_>> + '_ {
         self.units().filter(|unit| unit.is_entity())
     }
 
     /// Return an iterator over the external unit declarations in this module.
-    pub fn decls<'a>(&'a self) -> impl Iterator<Item = DeclId> + 'a {
+    pub fn decls(&self) -> impl Iterator<Item = DeclId> + '_ {
         self.decl_order.iter().cloned()
     }
 
@@ -152,7 +159,7 @@ impl Module {
     }
 
     /// Return an iterator over the symbols in the module.
-    pub fn symbols<'a>(&'a self) -> impl Iterator<Item = (&UnitName, LinkedUnit, &Signature)> + 'a {
+    pub fn symbols(&self) -> impl Iterator<Item = (&UnitName, LinkedUnit, &Signature)> + '_ {
         self.units()
             .map(|unit| (unit.name(), LinkedUnit::Def(unit.id()), unit.sig()))
             .chain(
@@ -162,16 +169,16 @@ impl Module {
     }
 
     /// Return an iterator over the local symbols in the module.
-    pub fn local_symbols<'a>(
-        &'a self,
-    ) -> impl Iterator<Item = (&UnitName, LinkedUnit, &Signature)> + 'a {
+    pub fn local_symbols(
+        &self,
+    ) -> impl Iterator<Item = (&UnitName, LinkedUnit, &Signature)> + '_ {
         self.symbols().filter(|&(name, ..)| name.is_local())
     }
 
     /// Return an iterator over the global symbols in the module.
-    pub fn global_symbols<'a>(
-        &'a self,
-    ) -> impl Iterator<Item = (&UnitName, LinkedUnit, &Signature)> + 'a {
+    pub fn global_symbols(
+        &self,
+    ) -> impl Iterator<Item = (&UnitName, LinkedUnit, &Signature)> + '_ {
         self.symbols().filter(|&(name, ..)| name.is_global())
     }
 
@@ -243,10 +250,10 @@ impl Module {
         match verifier.finish() {
             Ok(()) => (),
             Err(errs) => {
-                eprintln!("");
+                eprintln!();
                 eprintln!("Verified module:");
                 eprintln!("{}", self.dump());
-                eprintln!("");
+                eprintln!();
                 eprintln!("Verification errors:");
                 eprintln!("{}", errs);
                 panic!("verification failed");
@@ -316,19 +323,19 @@ impl std::fmt::Display for ModuleDumper<'_> {
         let mut newline = false;
         for unit in self.0.units() {
             if newline {
-                writeln!(f, "")?;
-                writeln!(f, "")?;
+                writeln!(f)?;
+                writeln!(f)?;
             }
             newline = true;
             write!(f, "{}: ", unit.id())?;
             write!(f, "{}", unit)?;
         }
         if newline && !self.0.decls().count() > 0 {
-            writeln!(f, "")?;
+            writeln!(f)?;
         }
         for decl in self.0.decls() {
             if newline {
-                writeln!(f, "")?;
+                writeln!(f)?;
             }
             newline = true;
             let data = &self.0[decl];

@@ -3,6 +3,7 @@
 //! Types of values.
 
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 pub use self::TypeKind::*;

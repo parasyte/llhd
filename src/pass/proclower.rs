@@ -3,6 +3,7 @@
 //! Process Lowering
 
 use crate::{ir::prelude::*, opt::prelude::*};
+use log::{info, trace};
 
 /// Process Lowering
 ///
@@ -11,7 +12,7 @@ pub struct ProcessLowering;
 
 impl Pass for ProcessLowering {
     fn run_on_cfg(ctx: &PassContext, unit: &mut UnitBuilder) -> bool {
-        if !unit.is_process() || !is_suitable(ctx, &unit) {
+        if !unit.is_process() || !is_suitable(ctx, unit) {
             return false;
         }
         info!("ProcLower [{}]", unit.name());
@@ -51,7 +52,7 @@ fn is_suitable(_ctx: &PassContext, unit: &Unit) -> bool {
             trace!(
                 "Skipping {} ({} not allowed in entity)",
                 unit.name(),
-                inst.dump(&unit)
+                inst.dump(unit)
             );
             return false;
         }
@@ -67,7 +68,7 @@ fn is_suitable(_ctx: &PassContext, unit: &Unit) -> bool {
                     trace!(
                         "Skipping {} ({} not in wait sensitivity list)",
                         unit.name(),
-                        value.dump(&unit)
+                        value.dump(unit)
                     );
                     return false;
                 }

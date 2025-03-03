@@ -79,7 +79,7 @@ fn main() -> Result<()> {
     };
     let input_name = match input_path {
         Some(path) => format!("`{}`", path.display()),
-        None => format!("stdin"),
+        None => "stdin".to_string(),
     };
 
     // Setup the output writer.
@@ -99,7 +99,7 @@ fn main() -> Result<()> {
     };
     let output_name = match output_path {
         Some(path) => format!("`{}`", path.display()),
-        None => format!("stdout"),
+        None => "stdout".to_string(),
     };
 
     // Detect the input format.

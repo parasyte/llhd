@@ -49,7 +49,7 @@ impl<I: Iterator<Item = std::io::Result<u8>>> Lexer<I> {
     /// Advance the lexer to the next character.
     fn bump(&mut self) {
         self.offset += 1;
-        if self.peek[0] == Some('\n' as u8) {
+        if self.peek[0] == Some(b'\n') {
             self.line += 1;
             self.column = 0;
         }
@@ -83,7 +83,7 @@ impl<I: Iterator<Item = std::io::Result<u8>>> Iterator for Lexer<I> {
                     self.bump();
                     self.bump();
                     while self.peek[0].is_some()
-                        && (self.peek[0] != Some('*' as u8) || self.peek[1] != Some('/' as u8))
+                        && (self.peek[0] != Some(b'*') || self.peek[1] != Some(b'/'))
                     {
                         self.bump();
                     }
@@ -95,7 +95,7 @@ impl<I: Iterator<Item = std::io::Result<u8>>> Iterator for Lexer<I> {
                 (Some('/'), Some('/')) => {
                     self.bump();
                     self.bump();
-                    while self.peek[0].is_some() && self.peek[0] != Some('\n' as u8) {
+                    while self.peek[0].is_some() && self.peek[0] != Some(b'\n') {
                         self.bump();
                     }
                     continue;
@@ -162,10 +162,10 @@ impl<I: Iterator<Item = std::io::Result<u8>>> Iterator for Lexer<I> {
                     self.bump();
                     let mut v = vec![];
                     while let Some(c) = self.peek[0] {
-                        if self.peek[0] == Some('"' as u8) {
+                        if self.peek[0] == Some(b'"') {
                             break;
                         }
-                        if self.peek[0] == Some('\\' as u8) {
+                        if self.peek[0] == Some(b'\\') {
                             self.bump();
                         }
                         v.push(c);

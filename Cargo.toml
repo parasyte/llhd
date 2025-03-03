@@ -14,21 +14,22 @@ homepage = "http://llhd.io/"
 travis-ci = { repository = "fabianschuiki/llhd", branch = "master" }
 
 [dependencies]
-anyhow = "1.0"
 bitflags = "1"
-clap = "2"
 hibitset = "0.6"
 itertools = "0.9"
 lalrpop-util = "0.19"
-log = { version = "0.4", features = ["release_max_level_info"] }
+log = "0.4"
 num = { version = "0.3", features = ["serde"] }
 rayon = "1.3"
 regex = "1"
 serde = { version = "1", features = ["derive", "rc"] }
-pretty_env_logger = "0.4"
 
 [dev-dependencies]
+clap = "2"
 indoc = "1"
 
 [profile.release]
 debug = true
+
+[workspace]
+members = ["crates/*"]

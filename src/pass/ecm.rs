@@ -3,6 +3,7 @@
 //! Early Code Motion
 
 use crate::{analysis::DominatorTree, ir::prelude::*, opt::prelude::*};
+use log::{debug, info, trace};
 use std::collections::{HashMap, HashSet};
 
 /// Early Code Motion
@@ -32,7 +33,7 @@ impl Pass for EarlyCodeMotion {
         while let Some(&block) = work_pending.iter().next() {
             work_pending.remove(&block);
             work_done.insert(block);
-            trace!("Working on {}", block.dump(&unit));
+            trace!("Working on {}", block.dump(unit));
 
             // Process the instructions in this block.
             for inst in unit.insts(block).collect::<Vec<_>>() {
@@ -58,7 +59,7 @@ impl Pass for EarlyCodeMotion {
 
         trace!("Final block numbers:");
         for (bb, num) in block_numbers {
-            trace!("  {} = {}", bb.dump(&unit), num);
+            trace!("  {} = {}", bb.dump(unit), num);
         }
 
         modified
@@ -84,7 +85,7 @@ fn move_instruction(
     {
         return false;
     }
-    trace!("  Working on {}", inst.dump(&unit));
+    trace!("  Working on {}", inst.dump(unit));
 
     // To determine the possible insertion locations, we first need to find for
     // each argument of this instruction, which blocks its definition dominates.
@@ -106,7 +107,7 @@ fn move_instruction(
         }
         unit.remove_inst(inst);
         unit.insert_inst_before(inst, entry_term);
-        debug!("Move {} into {}", inst.dump(&unit), entry.dump(&unit));
+        debug!("Move {} into {}", inst.dump(unit), entry.dump(unit));
         return true;
     }
     // trace!("    Dominated blocks: {:?}", doms);
@@ -114,8 +115,7 @@ fn move_instruction(
     // Find the blocks that are present in all the domination sets. These are
     // the blocks where the current instruction can safely be moved and still
     // "see" all its arguments.
-    let possible_bbs = doms
-        .get(0)
+    let possible_bbs = doms.first()
         .into_iter()
         .flat_map(|bbs| bbs.iter())
         .filter(|bb| doms.iter().all(|bbs| bbs.contains(bb)))
@@ -132,13 +132,13 @@ fn move_instruction(
         Some(bb) => bb,
         None => return false,
     };
-    trace!("    Best block: {}", best_bb.dump(&unit));
+    trace!("    Best block: {}", best_bb.dump(unit));
 
     // Move the instruction up into this block.
     if best_bb == block {
         return false;
     }
-    debug!("Move {} into {}", inst.dump(&unit), best_bb.dump(&unit));
+    debug!("Move {} into {}", inst.dump(unit), best_bb.dump(unit));
     let term = unit.terminator(best_bb);
     unit.remove_inst(inst);
     unit.insert_inst_before(inst, term);

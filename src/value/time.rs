@@ -6,6 +6,7 @@
 
 use crate::ty::{time_ty, Type};
 use num::{traits::*, BigInt, BigRational};
+use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
 
 /// A constant time value.
@@ -101,7 +102,7 @@ fn write_ratio_as_si(ratio: &BigRational, f: &mut std::fmt::Formatter) -> std::f
         } else {
             prefix += 1;
         }
-        scaled = scaled * BigRational::from_integer(BigInt::from(1000));
+        scaled *= BigRational::from_integer(BigInt::from(1000));
     }
     let rounded = format!("{}", scaled.round());
     if shift > 0 {
@@ -129,8 +130,8 @@ mod tests {
                 "{}",
                 TimeValue::new(
                     BigRational::new(num.into(), denom.into()),
-                    delta.into(),
-                    epsilon.into()
+                    delta,
+                    epsilon
                 )
             )
         };

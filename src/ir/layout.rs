@@ -6,6 +6,7 @@ use crate::{
     ir::{Block, Inst},
     table::SecondaryTable,
 };
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Determines the order of instructions and BBs in a `Function` or `Process`.
@@ -50,13 +51,10 @@ struct InstNode {
 impl FunctionLayout {
     /// Add a mapping from an instruction to the block that contains it.
     pub(super) fn map_inst(&mut self, inst: Inst, bb: Block) {
-        match self.inst_map.insert(inst, bb) {
-            Some(old_bb) => panic!(
-                "inst {} already inserted in {}, now being inserted into {}",
-                inst, old_bb, bb
-            ),
-            None => (),
-        }
+        if let Some(old_bb) = self.inst_map.insert(inst, bb) { panic!(
+            "inst {} already inserted in {}, now being inserted into {}",
+            inst, old_bb, bb
+        ) }
     }
 
     /// Remove a mapping from an instruction to the block that contains it.
@@ -159,7 +157,7 @@ impl InstLayout {
     }
 
     /// Return an iterator over all instructions in layout order.
-    pub fn insts<'a>(&'a self) -> impl Iterator<Item = Inst> + 'a {
+    pub fn insts(&self) -> impl Iterator<Item = Inst> + '_ {
         std::iter::successors(self.first_inst, move |&inst| self.next_inst(inst))
     }
 

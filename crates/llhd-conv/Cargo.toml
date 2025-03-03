@@ -1,0 +1,14 @@
+[package]
+name = "llhd-conv"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0"
+clap = "2"
+itertools = "0.9"
+lalrpop-util = "0.19"
+llhd = { path = "../.." }
+log = { version = "0.4", features = ["release_max_level_info"] }
+pretty_env_logger = "0.4"
+regex = "1"

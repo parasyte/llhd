@@ -440,7 +440,7 @@ pub struct ArrayValue(pub Vec<Value>);
 impl ArrayValue {
     /// Create a new uniform array.
     pub fn new_uniform(length: usize, value: Value) -> Self {
-        ArrayValue(std::iter::repeat(value).take(length).collect())
+        ArrayValue(std::iter::repeat_n(value, length).collect())
     }
 
     /// Create a new array.

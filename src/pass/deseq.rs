@@ -8,6 +8,7 @@ use crate::{
     opt::prelude::*,
     value::IntValue,
 };
+use log::{info, trace};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 /// Desequentialization
@@ -77,7 +78,7 @@ fn deseq_process(ctx: &PassContext, unit: &mut UnitBuilder) -> Option<UnitData> 
         };
         (inst, sensitivity)
     };
-    trace!("Wait Inst: {}", wait_inst.dump(&unit));
+    trace!("Wait Inst: {}", wait_inst.dump(unit));
     trace!("Sensitivity: {:?}", sensitivity);
 
     // Ensure that there is is only one basic block per temporal region.
@@ -101,7 +102,7 @@ fn deseq_process(ctx: &PassContext, unit: &mut UnitBuilder) -> Option<UnitData> 
         for inst in unit.insts(bb) {
             let data = &unit[inst];
             if data.opcode() == Opcode::DrvCond {
-                trace!("Canonicalizing condition of {}", inst.dump(&unit));
+                trace!("Canonicalizing condition of {}", inst.dump(unit));
                 conds.push((
                     inst,
                     bb,
@@ -150,7 +151,7 @@ fn deseq_process(ctx: &PassContext, unit: &mut UnitBuilder) -> Option<UnitData> 
         .difference(&mig.migrated_drives)
         .for_each(|inst| {
             migrated = false;
-            trace!("Skipping ({} not migrated)", inst.dump(&unit));
+            trace!("Skipping ({} not migrated)", inst.dump(unit));
         });
 
     if migrated {
@@ -175,15 +176,15 @@ fn canonicalize(
 ) -> Dnf {
     let dnf = canonicalize_inner(ctx, unit, trg, cond, inv);
     let desc = if let Some(inst) = unit.get_value_inst(cond) {
-        inst.dump(&unit).to_string()
+        inst.dump(unit).to_string()
     } else {
-        cond.dump(&unit).to_string()
+        cond.dump(unit).to_string()
     };
     trace!(
         "  {} {{ {} }} => {}",
         if inv { "neg" } else { "pos" },
         desc,
-        dnf.dump(&unit),
+        dnf.dump(unit),
     );
     dnf
 }
@@ -332,10 +333,8 @@ impl std::fmt::Display for DnfDumper<'_> {
         if (self.0).0.is_empty() {
             return write!(f, "0");
         }
-        if (self.0).0.len() == 1 {
-            if (self.0).0.iter().next().unwrap().is_empty() {
-                return write!(f, "1");
-            }
+        if (self.0).0.len() == 1 && (self.0).0.iter().next().unwrap().is_empty() {
+            return write!(f, "1");
         }
         for (vs, sep) in (self.0).0.iter().zip(once("").chain(repeat(" | "))) {
             write!(f, "{}({})", sep, Dnf::dump_term(vs, &self.1))?;
@@ -382,13 +381,10 @@ fn detect_triggers(
     tr1: TemporalRegion,
     dnf: &Dnf,
 ) -> Option<Vec<Trigger>> {
-    trace!("Detecting triggers in {}", dnf.dump(&unit));
+    trace!("Detecting triggers in {}", dnf.dump(unit));
     let mut trigs = vec![];
     for conds in &dnf.0 {
-        let trig = match detect_term_triggers(ctx, unit, tr0, tr1, conds) {
-            Some(trig) => trig,
-            None => return None,
-        };
+        let trig = detect_term_triggers(ctx, unit, tr0, tr1, conds)?;
         trigs.push(trig);
     }
     Some(trigs)
@@ -401,7 +397,7 @@ fn detect_term_triggers(
     tr1: TemporalRegion,
     conds: &BTreeMap<Term, bool>,
 ) -> Option<Trigger> {
-    trace!("  Analyzing {}", Dnf::dump_term(conds, &unit));
+    trace!("  Analyzing {}", Dnf::dump_term(conds, unit));
 
     // Sort the level and edge sensitive terms.
     let mut edges = BTreeMap::new();
@@ -415,7 +411,7 @@ fn detect_term_triggers(
                     trace!(
                         "    {} {}",
                         if inv { "rising" } else { "falling" },
-                        sig.dump(&unit)
+                        sig.dump(unit)
                     );
                     edges.insert(
                         sig,
@@ -427,9 +423,9 @@ fn detect_term_triggers(
                 } else {
                     trace!(
                         "    Skipping ({}@{} without corresponding {}@{})",
-                        sig.dump(&unit),
+                        sig.dump(unit),
                         tr0,
-                        sig.dump(&unit),
+                        sig.dump(unit),
                         tr1
                     );
                     return None;
@@ -443,7 +439,7 @@ fn detect_term_triggers(
                     trace!(
                         "    {} {}",
                         if inv { "low" } else { "high" },
-                        sig.dump(&unit)
+                        sig.dump(unit)
                     );
                     levels.insert(
                         sig,
@@ -528,7 +524,7 @@ impl<'a, 'b> Migrator<'a, 'b> {
     }
 
     pub fn migrate_drive(&mut self, drive: Inst, _bb: Block, trigs: &Vec<Trigger>) -> bool {
-        trace!("Migrating {}", drive.dump(&self.src));
+        trace!("Migrating {}", drive.dump(self.src));
         let drive_target = self.src[drive].args()[0];
         let drive_value = self.src[drive].args()[1];
 
@@ -607,7 +603,7 @@ impl<'a, 'b> Migrator<'a, 'b> {
                         None => {
                             trace!(
                                 "    Skipping {} (level-sensitive with no trigger)",
-                                drive.dump(&self.src)
+                                drive.dump(self.src)
                             );
                             return false;
                         }
@@ -674,7 +670,7 @@ impl<'a, 'b> Migrator<'a, 'b> {
                 // Otherwise ensure that the probe occurs *after* the trigger.
                 // This is a requirement for modeling the behaviour with `reg`.
                 if tr != self.tr1 {
-                    trace!("    Skipping {} (probe in wrong TR)", inst.dump(&self.src));
+                    trace!("    Skipping {} (probe in wrong TR)", inst.dump(self.src));
                     return None;
                 }
             }
@@ -691,7 +687,7 @@ impl<'a, 'b> Migrator<'a, 'b> {
         // Otherwise just refuse to migrate.
         trace!(
             "    Skipping {} (cannot be migrated)",
-            value.dump(&self.src)
+            value.dump(self.src)
         );
         None
     }
@@ -700,7 +696,7 @@ impl<'a, 'b> Migrator<'a, 'b> {
         if let Some(&v) = self.cache.get(&data) {
             v
         } else {
-            trace!("    Migrated {}", src_value.dump(&self.src));
+            trace!("    Migrated {}", src_value.dump(self.src));
             let ty = self.src.value_type(src_value);
             let inst = self.dst.ins().build(data.clone(), ty);
             let value = self.dst.inst_result(inst);

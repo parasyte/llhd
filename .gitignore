@@ -3,7 +3,7 @@
 !.git*
 !.travis.yml
 /Cargo.lock
-/target
+target
 /docs/_build
 flamegraph.svg
 callgrind.*

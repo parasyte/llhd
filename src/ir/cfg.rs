@@ -10,6 +10,7 @@ use crate::{
     ir::{Block, BlockData},
     table::PrimaryTable2,
 };
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// A control flow graph.

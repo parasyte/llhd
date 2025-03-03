@@ -4,6 +4,7 @@
 
 use crate::ir::prelude::*;
 use crate::opt::prelude::*;
+use log::debug;
 
 /// Instruction Simplification
 ///
@@ -56,7 +57,7 @@ impl Pass for InstSimplification {
 }
 
 fn replace(from_inst: Inst, from_value: Value, to: Value, unit: &mut UnitBuilder) -> bool {
-    debug!("Replace {} with {}", from_inst.dump(&unit), to.dump(&unit));
+    debug!("Replace {} with {}", from_inst.dump(unit), to.dump(unit));
     unit.replace_use(from_value, to) > 0
 }
 

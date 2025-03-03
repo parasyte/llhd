@@ -7,6 +7,7 @@
 use crate::ir::prelude::*;
 use crate::ty::{int_ty, Type};
 use num::{bigint::ToBigInt, traits::*, BigInt, BigUint};
+use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
 
 /// An integer value.

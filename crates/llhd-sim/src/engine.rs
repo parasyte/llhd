@@ -146,7 +146,7 @@ impl<'ts, 'tm> Engine<'ts, 'tm> {
                     self.step_instance(lk.borrow_mut(), &changed_signals, first)
                 })
                 .reduce(
-                    || Vec::new(),
+                    Vec::new,
                     |mut a, b| {
                         a.extend(b);
                         a
@@ -241,7 +241,7 @@ impl<'ts, 'tm> Engine<'ts, 'tm> {
                         let mut modified: Vec<_> = vars
                             .clone()
                             .map(|var| match instance.value(var) {
-                                ValueSlot::Variable(ref k) => k.clone(),
+                                ValueSlot::Variable(k) => k.clone(),
                                 x => panic!(
                                     "variable targeted by store action has value {:?} instead of \
                                      Variable(...)",
@@ -312,8 +312,8 @@ impl<'ts, 'tm> Engine<'ts, 'tm> {
                 .iter()
                 .filter(|sig| changed_signals.contains(sig))
             {
-                let value = instance.signal_values[&sig];
-                trace!("  Triggering {} ({})", self.state.probes[&sig][0], value);
+                let value = instance.signal_values[sig];
+                trace!("  Triggering {} ({})", self.state.probes[sig][0], value);
                 for &inst in unit.uses(value) {
                     match unit[inst].opcode() {
                         Opcode::Drv | Opcode::Inst | Opcode::Sig => continue,
@@ -402,7 +402,7 @@ struct InstContext<'a> {
     time: &'a TimeValue,
 }
 
-impl<'a> InstContext<'a> {
+impl InstContext<'_> {
     /// Execute a single instruction. Returns an action to be taken in response
     /// to the instruction.
     fn exec(&self, inst: llhd::ir::Inst) -> Action {
@@ -709,7 +709,7 @@ impl<'a> InstContext<'a> {
                 select: vec![],
                 width: self.pointer_width(id),
             }]),
-            Some(ValueSlot::VariablePointer(ref ptr)) => ptr.clone(),
+            Some(ValueSlot::VariablePointer(ptr)) => ptr.clone(),
             x => panic!(
                 "expected value {:?} to resolve to a variable pointer, got {:?}",
                 id, x
@@ -725,7 +725,7 @@ impl<'a> InstContext<'a> {
                 select: vec![],
                 width: self.pointer_width(id),
             }]),
-            Some(ValueSlot::SignalPointer(ref ptr)) => ptr.clone(),
+            Some(ValueSlot::SignalPointer(ptr)) => ptr.clone(),
             x => panic!(
                 "expected value {:?} to resolve to a signal pointer, got {:?}",
                 id, x
@@ -906,10 +906,10 @@ impl<'a> InstContext<'a> {
         let order = match base_first {
             true => vec![base, hidden]
                 .into_iter()
-                .zip(vec![base_slice, hidden_slice].into_iter()),
+                .zip(vec![base_slice, hidden_slice]),
             false => vec![hidden, base]
                 .into_iter()
-                .zip(vec![hidden_slice, base_slice].into_iter()),
+                .zip(vec![hidden_slice, base_slice]),
         };
 
         // Create an updated set of pointer slices by fusing the base and hidden
@@ -1116,7 +1116,7 @@ pub fn write_pointer_select(select: &[ValueSelect], into: &mut Value, value: Val
             _ => panic!("access field {} in {}", index, into),
         },
         ValueSelect::Slice(offset, length) => match into {
-            Value::Int(ref mut v) => {
+            Value::Int(v) => {
                 let mut sub = v.extract_slice(offset, length).into();
                 write_pointer_select(&select[1..], &mut sub, value);
                 v.insert_slice(offset, length, sub.unwrap_int());

@@ -10,6 +10,7 @@ use crate::{
     verifier::Verifier,
     void_ty, Type,
 };
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashSet,
     ops::{Deref, Index, IndexMut},
@@ -205,10 +206,10 @@ impl<'a> Unit<'a> {
         match verifier.finish() {
             Ok(()) => (),
             Err(errs) => {
-                eprintln!("");
+                eprintln!();
                 eprintln!("Verified {}:", self.data.kind);
                 eprintln!("{}", self);
-                eprintln!("");
+                eprintln!();
                 eprintln!("Verification errors:");
                 eprintln!("{}", errs);
                 panic!("verification failed");
@@ -283,7 +284,7 @@ impl<'a> Unit<'a> {
 }
 
 /// # Analyses
-impl<'a> Unit<'a> {
+impl Unit<'_> {
     /// Compute the unit's temporal region graph.
     pub fn trg(self) -> TemporalRegionGraph {
         #[allow(deprecated)]
@@ -640,20 +641,20 @@ impl<'a> Unit<'a> {
 
 impl std::fmt::Display for Unit<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
+        writeln!(
             f,
-            "{} {} {} {{\n",
+            "{} {} {} {{",
             self.data.kind,
             self.data.name,
             self.data.sig.dump(self)
         )?;
         for bb in self.blocks() {
-            write!(f, "{}:\n", bb.dump(self))?;
+            writeln!(f, "{}:", bb.dump(self))?;
             for inst in self.insts(bb) {
                 if self[inst].opcode().is_terminator() && self.is_entity() {
                     continue;
                 }
-                write!(f, "    {}\n", inst.dump(self))?;
+                writeln!(f, "    {}", inst.dump(self))?;
             }
         }
         write!(f, "}}")?;
@@ -697,7 +698,7 @@ impl<'a> UnitBuilder<'a> {
             // Safety of the above is enforced by UnitBuilder by requiring all
             // mutation of the unit to go through a mutable borrow of the
             // builder itself.
-            data: data,
+            data,
             pos,
         }
     }
@@ -868,7 +869,7 @@ impl<'a> UnitBuilder<'a> {
 }
 
 /// # Control Flow Graph
-impl<'a> UnitBuilder<'a> {
+impl UnitBuilder<'_> {
     /// Set the name of a BB.
     pub fn set_block_name(&mut self, bb: Block, name: String) {
         self.data.cfg[bb].name = Some(name);
@@ -876,7 +877,7 @@ impl<'a> UnitBuilder<'a> {
 
     /// Clear the name of a BB.
     pub fn clear_block_name(&mut self, bb: Block) -> Option<String> {
-        std::mem::replace(&mut self.data.cfg[bb].name, None)
+        self.data.cfg[bb].name.take()
     }
 
     /// Set the anonymous name hint of a BB.
@@ -891,7 +892,7 @@ impl<'a> UnitBuilder<'a> {
 }
 
 /// # Data Flow Graph
-impl<'a> UnitBuilder<'a> {
+impl UnitBuilder<'_> {
     /// Add a placeholder value.
     ///
     /// This function is intended to be used when constructing PHI nodes.
@@ -989,7 +990,7 @@ impl<'a> UnitBuilder<'a> {
         for arg in sig.args() {
             let value = self.add_value(ValueData::Arg {
                 ty: sig.arg_type(arg),
-                arg: arg,
+                arg,
             });
             self.data.dfg.args.add(arg, value);
         }
@@ -1134,7 +1135,7 @@ impl<'a> UnitBuilder<'a> {
 /// # Basic Block Layout
 ///
 /// The following functions are used to modify the basic block layout.
-impl<'a> UnitBuilder<'a> {
+impl UnitBuilder<'_> {
     /// Append a BB to the end of the function.
     pub fn append_block(&mut self, bb: Block) {
         let layout = &mut self.data.layout;
@@ -1293,7 +1294,7 @@ impl<'a> UnitBuilder<'a> {
 ///
 /// The following functions are used to modify the instruction layout within a
 /// block.
-impl<'a> UnitBuilder<'a> {
+impl UnitBuilder<'_> {
     /// Append an instruction to the end of a BB.
     pub fn append_inst(&mut self, inst: Inst, bb: Block) {
         self.data.layout.bbs[bb].layout.append_inst(inst);
